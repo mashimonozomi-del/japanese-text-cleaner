@@ -1,7 +1,52 @@
 import express from "express";
+import { paymentMiddleware } from "@x402/express";
+import {
+  x402ResourceServer,
+  HTTPFacilitatorClient
+} from "@x402/core/server";
+import { ExactEvmScheme } from "@x402/evm/exact/server";
 
 const app = express();
 app.use(express.json());
+
+const payTo = "0x4ffe239509AF666590278cb649E4e92f19E648a2";
+
+const facilitatorClient = new HTTPFacilitatorClient({
+  url: "https://x402.org/facilitator"
+});
+
+const server = new x402ResourceServer(facilitatorClient);
+server.register("eip155:*", new ExactEvmScheme());
+
+app.get("/", (req, res) => {
+  res.json({
+    name: "Japanese Text Cleaner",
+    description: "Japanese text cleaning API for AI agents",
+    status: "online",
+    endpoint: "POST /clean",
+    price: "$0.01 USDC"
+  });
+});
+
+app.use(
+  paymentMiddleware(
+    {
+      "POST /clean": {
+        accepts: [
+          {
+            scheme: "exact",
+            price: "$0.01",
+            network: "eip155:8453",
+            payTo
+          }
+        ],
+        description: "Clean and normalize Japanese text for AI agents",
+        mimeType: "application/json"
+      }
+    },
+    server
+  )
+);
 
 function cleanJapaneseText(text) {
   return text
@@ -13,14 +58,6 @@ function cleanJapaneseText(text) {
     .trim();
 }
 
-app.get("/", (req, res) => {
-  res.json({
-    name: "Japanese Text Cleaner",
-    description: "Japanese text cleaning API for AI agents",
-    status: "online"
-  });
-});
-
 app.post("/clean", (req, res) => {
   const { text } = req.body;
 
@@ -30,11 +67,9 @@ app.post("/clean", (req, res) => {
     });
   }
 
-  const cleaned = cleanJapaneseText(text);
-
   res.json({
     original: text,
-    cleaned: cleaned
+    cleaned: cleanJapaneseText(text)
   });
 });
 
