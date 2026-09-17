@@ -7,12 +7,15 @@ import {
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 
 const app = express();
-app.use(express.json());
+app.disable("x-powered-by");
+app.use(express.json({ limit: "64kb" }));
 
-const payTo = "0x4ffe239509AF666590278cb649E4e92f19E648a2";
+const payTo = process.env.PAY_TO || "0x4ffe239509AF666590278cb649E4e92f19E648a2";
+const facilitatorUrl =
+  process.env.FACILITATOR_URL || "https://x402.dexter.cash";
 
 const facilitatorClient = new HTTPFacilitatorClient({
-  url: "https://x402.org/facilitator"
+  url: facilitatorUrl
 });
 
 const server = new x402ResourceServer(facilitatorClient);
@@ -24,8 +27,13 @@ app.get("/", (req, res) => {
     description: "Japanese text cleaning API for AI agents",
     status: "online",
     endpoint: "POST /clean",
-    price: "$0.01 USDC"
+    price: "$0.01 USDC",
+    network: "Base (eip155:8453)"
   });
+});
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
 app.use(
@@ -71,6 +79,15 @@ app.post("/clean", (req, res) => {
     original: text,
     cleaned: cleanJapaneseText(text)
   });
+});
+
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && "body" in error) {
+    return res.status(400).json({ error: "Invalid JSON body." });
+  }
+
+  console.error(error);
+  res.status(500).json({ error: "Internal server error." });
 });
 
 const PORT = process.env.PORT || 3000;

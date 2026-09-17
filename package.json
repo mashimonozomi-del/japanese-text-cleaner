@@ -7,11 +7,9 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^5.1.0",
-    "@x402/core": "latest",
-    "@x402/evm": "latest",
-    "@x402/express": "latest"
-    
-    
+    "@x402/core": "2.26.0",
+    "@x402/evm": "2.26.0",
+    "@x402/express": "2.26.0",
+    "express": "5.1.0"
   }
 }
